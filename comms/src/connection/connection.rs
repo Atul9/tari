@@ -29,6 +29,7 @@ use crate::connection::{
     Result,
 };
 use std::{cmp, iter::IntoIterator};
+use zmq::Socket;
 
 /// Represents a low-level connection which can be bound an address
 /// supported by [`ZeroMQ`] the `ZMQ_ROUTER` socket.
@@ -176,19 +177,7 @@ impl<'a> Connection<'a> {
                 .map_err(config_error_mapper)?;
         }
 
-        match self.linger {
-            Linger::Indefinitely => {
-                socket.set_linger(-1).map_err(config_error_mapper)?;
-            },
-
-            Linger::Never => {
-                socket.set_linger(0).map_err(config_error_mapper)?;
-            },
-
-            Linger::Timeout(t) => {
-                socket.set_linger(t as i32).map_err(config_error_mapper)?;
-            },
-        }
+        set_linger(&socket, self.linger)?;
 
         match self.curve_encryption {
             CurveEncryption::None => {},
@@ -237,6 +226,18 @@ impl<'a> Connection<'a> {
     }
 }
 
+fn set_linger(socket: &Socket, linger: Linger) -> Result<()> {
+    let config_error_mapper = |e| ConnectionError::SocketError(format!("Unable to configure linger on socket: {}", e));
+
+    match linger {
+        Linger::Indefinitely => socket.set_linger(-1).map_err(config_error_mapper),
+
+        Linger::Never => socket.set_linger(0).map_err(config_error_mapper),
+
+        Linger::Timeout(t) => socket.set_linger(t as i32).map_err(config_error_mapper),
+    }
+}
+
 /// Represents an established connection.
 pub struct EstablishedConnection {
     pub socket: zmq::Socket,
@@ -268,6 +269,13 @@ impl EstablishedConnection {
         self.socket
             .recv_multipart(0)
             .map_err(|e| ConnectionError::SocketError(format!("Error receiving: {} ({})", e, e.to_raw())))
+    }
+
+    /// Set linger for this connection. Linger determines how long the connection
+    /// should "stick around" after being told to disconnect. This allows time for
+    /// communication to cleanly terminate without interrupting existing connections.
+    pub fn set_linger(&self, linger: Linger) -> Result<()> {
+        set_linger(&self.socket, linger)
     }
 
     /// Sends multipart message frames. This function is non-blocking.

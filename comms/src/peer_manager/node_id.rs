@@ -75,7 +75,7 @@ impl TryFrom<&[u8]> for NodeDistance {
     }
 }
 
-#[derive(Clone, Debug, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, Deserialize, Serialize, Hash)]
 pub struct NodeId(NodeIdArray);
 
 impl NodeId {
@@ -153,6 +153,12 @@ impl TryFrom<&[u8]> for NodeId {
         } else {
             Err(NodeIdError::IncorrectByteCount)
         }
+    }
+}
+
+impl AsRef<[u8]> for NodeId {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
     }
 }
 

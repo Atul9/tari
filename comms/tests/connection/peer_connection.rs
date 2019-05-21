@@ -30,6 +30,7 @@ use tari_comms::connection::{
     CurveEncryption,
     Direction,
     InprocAddress,
+    Linger,
     PeerConnection,
     PeerConnectionContextBuilder,
     PeerConnectionError,
@@ -300,10 +301,8 @@ fn connection_disconnect() {
     {
         // Connect to the inbound connection and send a message
         let sender = Connection::new(&ctx, Direction::Outbound).establish(&addr).unwrap();
+        sender.set_linger(Linger::Indefinitely).unwrap();
         sender.send(&[&[123u8]]).unwrap();
-        // Without this pause, it's possible for the connection to drop before it
-        // has connected.
-        thread::sleep(Duration::from_millis(50));
     }
 
     conn.wait_disconnected(Duration::from_millis(2000)).unwrap();

@@ -96,6 +96,15 @@ impl NetAddress {
             _ => false,
         }
     }
+
+    /// Returns the port for the NetAddress if applicable, otherwise None
+    pub fn maybe_port(&self) -> Option<u16> {
+        match self {
+            NetAddress::Onion(addr) => Some(addr.port()),
+            NetAddress::IP(addr) => Some(addr.port()),
+            NetAddress::I2P(_) => None,
+        }
+    }
 }
 
 impl FromStr for NetAddress {
